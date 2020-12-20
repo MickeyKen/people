@@ -13,7 +13,7 @@ import math
 import tf
 from geometry_msgs.msg import Quaternion
 
-SEARCH_RADIUS = 0.25
+SEARCH_RADIUS = 1.0
 
 def callback(leg, people, area):
     # rospy.loginfo("leg timestamp: %d ns" % leg.header.stamp.to_nsec())
@@ -22,6 +22,11 @@ def callback(leg, people, area):
 
     center_x = area.point.x
     center_y = area.point.y
+    if area.point.z == 1:
+        face = True
+    else:
+        face = False
+
     print ("X: ", center_x, "Y: ", center_y)
 
     target_name = ""
@@ -56,25 +61,49 @@ def callback(leg, people, area):
             deg = math.degrees(rad)
             deg1 = (deg + 90) % 360
             deg2 = (deg + 270) % 360
-            if deg1 > 180:
-                q = euler_to_quaternion(deg1)
-                posearray_msg.pose.orientation.x = q.x
-                posearray_msg.pose.orientation.y = q.y
-                posearray_msg.pose.orientation.z = q.z
-                posearray_msg.pose.orientation.w = q.w
-            elif deg2 > 180:
-                q = euler_to_quaternion(deg2)
-                posearray_msg.pose.orientation.x = q.x
-                posearray_msg.pose.orientation.y = q.y
-                posearray_msg.pose.orientation.z = q.z
-                posearray_msg.pose.orientation.w = q.w
+            center_leg_x = (legs[1][0]+legs[0][0])/2.0
+            center_leg_y = (legs[1][1]+legs[0][1])/2.0
+            xp1 = center_leg_x + (1.0 * math.sin(math.radians(deg1)))
+            yp1 = center_leg_y - (1.0 * math.cos(math.radians(deg1)))
+            xp2 = center_leg_x + (1.0 * math.sin(math.radians(deg2)))
+            yp2 = center_leg_y - (1.0 * math.cos(math.radians(deg2)))
+            diff1 = math.hypot(xp1, yp1)
+            diff2 = math.hypot(xp2, yp2)
+            if diff1 < diff2:
+                if face:
+                    deg = deg1
+                else:
+                    deg = deg2
             else:
-                posearray_msg.pose.orientation.x = 0.0
-                posearray_msg.pose.orientation.y = 0.0
-                posearray_msg.pose.orientation.z = 0.0
-                posearray_msg.pose.orientation.w = 1.0
+                if face:
+                    deg = deg2
+                else:
+                    deg = deg1
 
 
+            # if deg1 > 180:
+            #     q = euler_to_quaternion(deg1)
+            #     posearray_msg.pose.orientation.x = q.x
+            #     posearray_msg.pose.orientation.y = q.y
+            #     posearray_msg.pose.orientation.z = q.z
+            #     posearray_msg.pose.orientation.w = q.w
+            # elif deg2 > 180:
+            #     q = euler_to_quaternion(deg2)
+            #     posearray_msg.pose.orientation.x = q.x
+            #     posearray_msg.pose.orientation.y = q.y
+            #     posearray_msg.pose.orientation.z = q.z
+            #     posearray_msg.pose.orientation.w = q.w
+            # else:
+            #     posearray_msg.pose.orientation.x = 0.0
+            #     posearray_msg.pose.orientation.y = 0.0
+            #     posearray_msg.pose.orientation.z = 0.0
+            #     posearray_msg.pose.orientation.w = 1.0
+
+            q = euler_to_quaternion(deg)
+            posearray_msg.pose.orientation.x = q.x
+            posearray_msg.pose.orientation.y = q.y
+            posearray_msg.pose.orientation.z = q.z
+            posearray_msg.pose.orientation.w = q.w
 
             posearray_msg.header.frame_id = "/base_scan"
             posearray_msg.header.stamp = rospy.Time.now()
